@@ -78,7 +78,11 @@ pub fn update(
     }
     UserSetWeaponSpeed(str) -> {
       let weapon_time_per_hit =
-        float.parse(str) |> result.unwrap(model.weapon_time_per_hit)
+        float.parse(str)
+        |> result.try_recover(fn(_) {
+          int.parse(str) |> result.map(int.to_float)
+        })
+        |> result.unwrap(model.weapon_time_per_hit)
       model
       |> fn(m) {
         Model(..m, weapon_time_per_hit_input: str, weapon_time_per_hit:)
