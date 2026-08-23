@@ -10,8 +10,10 @@ import lustre/element
 import lustre/element/html
 import lustre/event
 
+import damage_simulator as dmgsim
+
 pub fn main() -> Nil {
-  let app = lustre.application(init, update, view)
+  let app = lustre.application(dmgsim.init, dmgsim.update, dmgsim.view)
   let assert Ok(_) = lustre.start(app, "#app", Nil)
   Nil
 }
@@ -63,6 +65,10 @@ fn update(model: Model, message: Message) -> #(Model, effect.Effect(Message)) {
 }
 
 fn view(model: Model) -> element.Element(Message) {
+  view_xp_calc(model)
+}
+
+fn view_xp_calc(model: Model) -> element.Element(Message) {
   let Xp(current_xp) = model.current_xp
   let target_xp_needed = xp_needed(1, model.target_level)
   let remaining_xp_needed =
