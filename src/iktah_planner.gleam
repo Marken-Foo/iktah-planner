@@ -4,6 +4,7 @@ import lustre/element
 import lustre/element/html
 
 import damage_simulator as dmgsim
+import damage_simulator/view as dmgsimview
 import xp
 
 pub fn main() -> Nil {
@@ -57,7 +58,7 @@ fn view(model: Model) -> element.Element(Message) {
     xp.view(model.xp_model) |> element.map(XpMessage),
     html.hr([]),
     html.h2([], [html.text("Damage simulator calculator")]),
-    dmgsim.view(model.damage_simulator_model)
+    dmgsimview.view(model.damage_simulator_model)
       |> element.map(DamageSimulatorMessage),
   ])
 }
