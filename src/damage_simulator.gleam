@@ -14,7 +14,6 @@ pub type Model {
     mob_hp: Int,
     weapon_time_per_hit_input: String,
     weapon_time_per_hit: Float,
-    hits_per_kill: Result(Float, Nil),
   )
 }
 
@@ -36,9 +35,7 @@ pub fn init(_) -> #(Model, effect.Effect(Message)) {
     player_crit_chance: 0.05,
     weapon_time_per_hit_input: "2.0",
     weapon_time_per_hit: 2.0,
-    hits_per_kill: Error(Nil),
   )
-  |> update_hits_per_kill()
   |> fn(m) { #(m, effect.none()) }
 }
 
@@ -51,14 +48,12 @@ pub fn update(
       let player_atk = int.parse(str) |> result.unwrap(model.player_atk)
       model
       |> fn(m) { Model(..m, player_atk:) }
-      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
     UserSetPlayerStr(str) -> {
       let player_str = int.parse(str) |> result.unwrap(model.player_str)
       model
       |> fn(m) { Model(..m, player_str:) }
-      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
     UserSetPlayerCritChance(str) -> {
@@ -69,21 +64,18 @@ pub fn update(
         |> result.unwrap(model.player_crit_chance)
       model
       |> fn(m) { Model(..m, player_crit_chance:) }
-      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
     UserSetMobDef(str) -> {
       let mob_def = int.parse(str) |> result.unwrap(model.mob_def)
       model
       |> fn(m) { Model(..m, mob_def:) }
-      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
     UserSetMobHp(str) -> {
       let mob_hp = int.parse(str) |> result.unwrap(model.mob_hp)
       model
       |> fn(m) { Model(..m, mob_hp:) }
-      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
     UserSetWeaponSpeed(str) -> {
@@ -97,22 +89,9 @@ pub fn update(
       |> fn(m) {
         Model(..m, weapon_time_per_hit_input: str, weapon_time_per_hit:)
       }
-      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
   }
-}
-
-fn update_hits_per_kill(model: Model) -> Model {
-  let hits_per_kill =
-    hits_per_kill(
-      player_atk: model.player_atk,
-      player_str: model.player_str,
-      mob_def: model.mob_def,
-      mob_hp: model.mob_hp,
-      player_crit_chance: model.player_crit_chance,
-    )
-  Model(..model, hits_per_kill:)
 }
 
 type Damage =
@@ -155,7 +134,7 @@ fn apply_miss_chance(
   base_pmf |> probs.scale_and_reassign_probability(chance_to_hit, 0)
 }
 
-fn hits_per_kill(
+pub fn hits_per_kill(
   player_atk player_atk: Int,
   player_str player_str: Int,
   mob_def mob_def: Int,

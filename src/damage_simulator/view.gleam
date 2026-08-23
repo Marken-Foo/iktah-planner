@@ -83,6 +83,21 @@ pub fn view(model: Model) -> element.Element(Message) {
     ]),
     html.br([]),
     html.br([]),
+    damage_output_view(model),
+  ])
+}
+
+fn damage_output_view(model: Model) -> element.Element(Message) {
+  let hits_per_kill =
+    damage_simulator.hits_per_kill(
+      player_atk: model.player_atk,
+      player_str: model.player_str,
+      mob_def: model.mob_def,
+      mob_hp: model.mob_hp,
+      player_crit_chance: model.player_crit_chance,
+    )
+
+  element.fragment([
     html.text(
       "Damage range per hit: "
       <> "1 to "
@@ -91,32 +106,26 @@ pub fn view(model: Model) -> element.Element(Message) {
     html.br([]),
     html.text(
       "Chance to hit: "
-      <> {
-        chance_to_hit(player_atk: model.player_atk, mob_def: model.mob_def)
-        |> float.multiply(100.0)
-        |> float.to_string()
-      }
+      <> chance_to_hit(player_atk: model.player_atk, mob_def: model.mob_def)
+      |> float.multiply(100.0)
+      |> float.to_string()
       <> "%",
     ),
     html.br([]),
     html.text(
       "Expected number of hits per kill: "
-      <> {
-        case model.hits_per_kill {
-          Ok(hits_per_kill) -> float.to_string(hits_per_kill)
-          Error(_) -> "Infinity"
-        }
+      <> case hits_per_kill {
+        Ok(hits_per_kill) -> float.to_string(hits_per_kill)
+        Error(_) -> "Infinity"
       },
     ),
     html.br([]),
     html.text(
       "Expected time per kill: "
-      <> {
-        case model.hits_per_kill {
-          Ok(hits_per_kill) ->
-            hits_per_kill *. model.weapon_time_per_hit |> float.to_string()
-          Error(_) -> "Infinity"
-        }
+      <> case hits_per_kill {
+        Ok(hits_per_kill) ->
+          hits_per_kill *. model.weapon_time_per_hit |> float.to_string()
+        Error(_) -> "Infinity"
       },
     ),
   ])
