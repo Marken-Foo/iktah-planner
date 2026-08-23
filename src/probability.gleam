@@ -3,6 +3,7 @@ import gleam/dict
 import gleam/float
 import gleam/int
 import gleam/list
+import gleam/option
 import gleam/pair
 import gleam/result
 
@@ -93,6 +94,37 @@ pub fn scale_and_reassign_probability(
   raw(pmf)
   |> dict.insert(value, 1.0 -. after_sum_other_ps)
   |> dict.filter(fn(_, p) { p >=. 0.0 })
+  |> Pmf()
+}
+
+/// Add two distributions together, maintaining normalisation.
+pub fn add_pmfs(pmf1: Pmf, w1: Probability, pmf2: Pmf) -> Pmf {
+  let w1 = clamp_probability(w1)
+  let pmf1 = scale_pmf(pmf1, w1) |> raw()
+  let pmf2 = scale_pmf(pmf2, 1.0 -. w1) |> raw()
+  dict.combine(pmf1, pmf2, float.add) |> Pmf()
+}
+
+/// Multiply two distributions together, as though making one after the other.
+pub fn multiply_pmfs(pmf1: Pmf, pmf2: Pmf) -> Pmf {
+  let pmf1 = raw(pmf1)
+  let pmf2 = raw(pmf2)
+  dict.fold(
+    over: pmf1,
+    from: dict.new(),
+    with: fn(acc1, v1: Value, p1: Probability) {
+      dict.fold(
+        over: pmf2,
+        from: dict.new(),
+        with: fn(acc2, v2: Value, p2: Probability) {
+          dict.upsert(acc2, int.add(v1, v2), fn(p) {
+            p |> option.unwrap(0.0) |> float.add(p1 *. p2)
+          })
+        },
+      )
+      |> dict.combine(acc1, float.add)
+    },
+  )
   |> Pmf()
 }
 

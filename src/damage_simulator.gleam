@@ -13,6 +13,7 @@ pub type Model {
   Model(
     player_atk: Int,
     player_str: Int,
+    player_crit_chance: Float,
     mob_def: Int,
     mob_hp: Int,
     weapon_time_per_hit_input: String,
@@ -24,6 +25,7 @@ pub type Model {
 pub type Message {
   UserSetPlayerAtk(String)
   UserSetPlayerStr(String)
+  UserSetPlayerCritChance(String)
   UserSetMobDef(String)
   UserSetMobHp(String)
   UserSetWeaponSpeed(String)
@@ -35,6 +37,7 @@ pub fn init(_) -> #(Model, effect.Effect(Message)) {
     player_str: 1,
     mob_def: 1,
     mob_hp: 120,
+    player_crit_chance: 0.05,
     weapon_time_per_hit_input: "2.0",
     weapon_time_per_hit: 2.0,
     hits_per_kill: Error(Nil),
@@ -59,6 +62,17 @@ pub fn update(
       let player_str = int.parse(str) |> result.unwrap(model.player_str)
       model
       |> fn(m) { Model(..m, player_str:) }
+      |> update_hits_per_kill()
+      |> fn(m) { #(m, effect.none()) }
+    }
+    UserSetPlayerCritChance(str) -> {
+      let player_crit_chance =
+        int.parse(str)
+        |> result.map(int.to_float)
+        |> result.try(float.divide(_, by: 100.0))
+        |> result.unwrap(model.player_crit_chance)
+      model
+      |> fn(m) { Model(..m, player_crit_chance:) }
       |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
@@ -100,6 +114,7 @@ fn update_hits_per_kill(model: Model) -> Model {
       player_str: model.player_str,
       mob_def: model.mob_def,
       mob_hp: model.mob_hp,
+      player_crit_chance: model.player_crit_chance,
     )
   Model(..model, hits_per_kill:)
 }
@@ -127,6 +142,22 @@ pub fn view(model: Model) -> element.Element(Message) {
       attribute.value(model.player_str |> int.to_string()),
       event.on_input(UserSetPlayerStr),
     ]),
+    html.br([]),
+    html.text("Player crit chance: "),
+    html.input([
+      attribute.type_("number"),
+      attribute.id("player_crit_chance"),
+      attribute.min("0"),
+      attribute.max("100"),
+      attribute.value(
+        model.player_crit_chance
+        |> float.multiply(100.0)
+        |> float.truncate()
+        |> int.to_string(),
+      ),
+      event.on_input(UserSetPlayerCritChance),
+    ]),
+    html.text("%"),
     html.br([]),
     html.label([attribute.for("mob_def_input")], [
       html.text("Mob DEF: "),
@@ -223,6 +254,16 @@ fn max_hit(player_str: Int) -> Damage {
   1 + player_str / 3
 }
 
+fn apply_crit_rolls(
+  base_pmf: probs.Pmf,
+  player_crit_chance: Float,
+) -> probs.Pmf {
+  // Roll twice
+  let crit_pmf = probs.multiply_pmfs(base_pmf, base_pmf)
+  // On a given hit, chance of p to crit and 1-p to not crit
+  probs.add_pmfs(crit_pmf, clamp_probability(player_crit_chance), base_pmf)
+}
+
 fn apply_miss_chance(
   base_pmf: probs.Pmf,
   chance_to_hit: Probability,
@@ -235,10 +276,11 @@ fn hits_per_kill(
   player_str player_str: Int,
   mob_def mob_def: Int,
   mob_hp mob_hp: Int,
+  player_crit_chance player_crit_chance: Float,
 ) -> Result(Float, Nil) {
   let pmf_of_one_attack =
     probs.uniform_pmf(1, max_hit(player_str))
-    // TODO: Implement crit damage calculations
     |> apply_miss_chance(chance_to_hit(player_atk, mob_def))
+    |> apply_crit_rolls(player_crit_chance)
   probs.expected_rolls_to_exceed_total_k(mob_hp, pmf_of_one_attack)
 }
