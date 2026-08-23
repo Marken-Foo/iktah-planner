@@ -17,7 +17,7 @@ pub type Model {
     mob_hp: Int,
     weapon_time_per_hit_input: String,
     weapon_time_per_hit: Float,
-    time_per_kill: Result(Float, Nil),
+    hits_per_kill: Result(Float, Nil),
   )
 }
 
@@ -37,9 +37,9 @@ pub fn init(_) -> #(Model, effect.Effect(Message)) {
     mob_hp: 120,
     weapon_time_per_hit_input: "2.0",
     weapon_time_per_hit: 2.0,
-    time_per_kill: Error(Nil),
+    hits_per_kill: Error(Nil),
   )
-  |> update_time_per_kill()
+  |> update_hits_per_kill()
   |> fn(m) { #(m, effect.none()) }
 }
 
@@ -52,28 +52,28 @@ pub fn update(
       let player_atk = int.parse(str) |> result.unwrap(model.player_atk)
       model
       |> fn(m) { Model(..m, player_atk:) }
-      |> update_time_per_kill()
+      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
     UserSetPlayerStr(str) -> {
       let player_str = int.parse(str) |> result.unwrap(model.player_str)
       model
       |> fn(m) { Model(..m, player_str:) }
-      |> update_time_per_kill()
+      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
     UserSetMobDef(str) -> {
       let mob_def = int.parse(str) |> result.unwrap(model.mob_def)
       model
       |> fn(m) { Model(..m, mob_def:) }
-      |> update_time_per_kill()
+      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
     UserSetMobHp(str) -> {
       let mob_hp = int.parse(str) |> result.unwrap(model.mob_hp)
       model
       |> fn(m) { Model(..m, mob_hp:) }
-      |> update_time_per_kill()
+      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
     UserSetWeaponSpeed(str) -> {
@@ -87,22 +87,21 @@ pub fn update(
       |> fn(m) {
         Model(..m, weapon_time_per_hit_input: str, weapon_time_per_hit:)
       }
-      |> update_time_per_kill()
+      |> update_hits_per_kill()
       |> fn(m) { #(m, effect.none()) }
     }
   }
 }
 
-fn update_time_per_kill(model: Model) -> Model {
-  let time_per_kill =
-    time_per_kill(
+fn update_hits_per_kill(model: Model) -> Model {
+  let hits_per_kill =
+    hits_per_kill(
       player_atk: model.player_atk,
       player_str: model.player_str,
       mob_def: model.mob_def,
       mob_hp: model.mob_hp,
-      weapon_time_per_hit: model.weapon_time_per_hit,
     )
-  Model(..model, time_per_kill:)
+  Model(..model, hits_per_kill:)
 }
 
 pub fn view(model: Model) -> element.Element(Message) {
@@ -161,11 +160,39 @@ pub fn view(model: Model) -> element.Element(Message) {
       event.on_input(UserSetWeaponSpeed),
     ]),
     html.br([]),
+    html.br([]),
     html.text(
-      "Time per kill: "
+      "Damage range per hit: "
+      <> "1 to "
+      <> { int.to_string(max_hit(model.player_str)) },
+    ),
+    html.br([]),
+    html.text(
+      "Chance to hit: "
       <> {
-        case model.time_per_kill {
-          Ok(time_per_kill) -> float.to_string(time_per_kill)
+        chance_to_hit(player_atk: model.player_atk, mob_def: model.mob_def)
+        |> float.multiply(100.0)
+        |> float.to_string()
+      }
+      <> "%",
+    ),
+    html.br([]),
+    html.text(
+      "Expected number of hits per kill: "
+      <> {
+        case model.hits_per_kill {
+          Ok(hits_per_kill) -> float.to_string(hits_per_kill)
+          Error(_) -> "Infinity"
+        }
+      },
+    ),
+    html.br([]),
+    html.text(
+      "Expected time per kill: "
+      <> {
+        case model.hits_per_kill {
+          Ok(hits_per_kill) ->
+            hits_per_kill *. model.weapon_time_per_hit |> float.to_string()
           Error(_) -> "Infinity"
         }
       },
@@ -183,7 +210,10 @@ fn clamp_probability(p: Float) -> Probability {
   p |> float.max(0.0) |> float.min(1.0)
 }
 
-fn chance_to_hit(player_atk: Int, mob_def: Int) -> Probability {
+fn chance_to_hit(
+  player_atk player_atk: Int,
+  mob_def mob_def: Int,
+) -> Probability {
   { 50.0 +. 0.75 *. int.to_float(player_atk - mob_def) }
   |> fn(p) { p /. 100.0 }
   |> clamp_probability()
@@ -200,18 +230,15 @@ fn apply_miss_chance(
   base_pmf |> probs.scale_and_reassign_probability(chance_to_hit, 0)
 }
 
-fn time_per_kill(
+fn hits_per_kill(
   player_atk player_atk: Int,
   player_str player_str: Int,
   mob_def mob_def: Int,
   mob_hp mob_hp: Int,
-  weapon_time_per_hit weapon_time_per_hit: Float,
 ) -> Result(Float, Nil) {
   let pmf_of_one_attack =
     probs.uniform_pmf(1, max_hit(player_str))
     // TODO: Implement crit damage calculations
     |> apply_miss_chance(chance_to_hit(player_atk, mob_def))
-  let expected_number_of_rolls =
-    probs.expected_rolls_to_exceed_total_k(mob_hp, pmf_of_one_attack)
-  expected_number_of_rolls |> result.map(float.multiply(_, weapon_time_per_hit))
+  probs.expected_rolls_to_exceed_total_k(mob_hp, pmf_of_one_attack)
 }
