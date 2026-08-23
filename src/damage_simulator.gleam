@@ -7,7 +7,7 @@ import lustre/element
 import lustre/element/html
 import lustre/event
 
-import probability_mass_function as pmf
+import probability as probs
 
 pub type Model {
   Model(
@@ -189,8 +189,11 @@ fn max_hit(player_str: Int) -> Damage {
   1 + player_str / 3
 }
 
-fn apply_miss_chance(base_pmf: pmf.Pmf, chance_to_hit: Probability) -> pmf.Pmf {
-  base_pmf |> pmf.scale_and_reassign_probability(chance_to_hit, 0)
+fn apply_miss_chance(
+  base_pmf: probs.Pmf,
+  chance_to_hit: Probability,
+) -> probs.Pmf {
+  base_pmf |> probs.scale_and_reassign_probability(chance_to_hit, 0)
 }
 
 fn time_per_kill(
@@ -201,10 +204,10 @@ fn time_per_kill(
   weapon_time_per_hit weapon_time_per_hit: Float,
 ) -> Result(Float, Nil) {
   let pmf_of_one_attack =
-    pmf.uniform_pmf(1, max_hit(player_str))
+    probs.uniform_pmf(1, max_hit(player_str))
     // TODO: Implement crit damage calculations
     |> apply_miss_chance(chance_to_hit(player_atk, mob_def))
   let expected_number_of_rolls =
-    pmf.expected_rolls_to_exceed_total_k(mob_hp, pmf_of_one_attack)
+    probs.expected_rolls_to_exceed_total_k(mob_hp, pmf_of_one_attack)
   expected_number_of_rolls |> result.map(float.multiply(_, weapon_time_per_hit))
 }

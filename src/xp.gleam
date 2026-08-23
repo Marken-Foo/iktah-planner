@@ -9,17 +9,17 @@ import lustre/element
 import lustre/element/html
 import lustre/event
 
-type Model {
+pub type Model {
   Model(current_xp: Xp, current_level: Int, target_level: Int)
 }
 
-type Message {
+pub type Message {
   UserSetCurrentLevel(String)
   UserSetCurrentXp(String)
   UserSetTargetLevel(String)
 }
 
-fn init(_) -> #(Model, effect.Effect(Message)) {
+pub fn init(_) -> #(Model, effect.Effect(Message)) {
   let starting_xp = Xp(0)
   let #(starting_level, _) = level_given_total_xp(starting_xp)
   #(
@@ -32,7 +32,10 @@ fn init(_) -> #(Model, effect.Effect(Message)) {
   )
 }
 
-fn update(model: Model, message: Message) -> #(Model, effect.Effect(Message)) {
+pub fn update(
+  model: Model,
+  message: Message,
+) -> #(Model, effect.Effect(Message)) {
   case message {
     UserSetCurrentLevel(str) -> {
       let current_level = int.parse(str) |> result.unwrap(model.current_level)
@@ -55,7 +58,7 @@ fn update(model: Model, message: Message) -> #(Model, effect.Effect(Message)) {
   }
 }
 
-fn view(model: Model) -> element.Element(Message) {
+pub fn view(model: Model) -> element.Element(Message) {
   view_xp_calc(model)
 }
 
@@ -162,7 +165,7 @@ type Action {
   Action(xp: Xp, skill: Skill, time: Duration)
 }
 
-type Xp {
+pub type Xp {
   Xp(Int)
 }
 
