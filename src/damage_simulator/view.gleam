@@ -1,10 +1,11 @@
 import damage_simulator.{
   type Message, type Model, UserSetMobDef, UserSetMobHp, UserSetPlayerAtk,
-  UserSetPlayerCritChance, UserSetPlayerStr, UserSetWeaponSpeed, chance_to_hit,
-  max_hit,
-}
+  UserSetPlayerCritChance, UserSetPlayerStr, UserSetWeapon,
+} as dsim
+import damage_simulator/weapon
 import gleam/float
 import gleam/int
+import gleam/list
 import lustre/attribute
 import lustre/element
 import lustre/element/html
@@ -12,6 +13,8 @@ import lustre/event
 
 pub fn view(model: Model) -> element.Element(Message) {
   html.div([], [
+    weapon_dropdown(model),
+    html.br([]),
     html.label([attribute.for("player_atk_input")], [
       html.text("Player ATK: "),
     ]),
@@ -22,6 +25,8 @@ pub fn view(model: Model) -> element.Element(Message) {
       attribute.value(model.player_atk |> int.to_string()),
       event.on_input(UserSetPlayerAtk),
     ]),
+    html.text("+" <> model.weapon.atk |> int.to_string()),
+    html.text(" = " <> model.player_atk + model.weapon.atk |> int.to_string()),
     html.br([]),
     html.label([attribute.for("player_str_input")], [
       html.text("Player STR: "),
@@ -33,6 +38,8 @@ pub fn view(model: Model) -> element.Element(Message) {
       attribute.value(model.player_str |> int.to_string()),
       event.on_input(UserSetPlayerStr),
     ]),
+    html.text("+" <> model.weapon.str |> int.to_string()),
+    html.text(" = " <> model.player_str + model.weapon.str |> int.to_string()),
     html.br([]),
     html.text("Player crit chance: "),
     html.input([
@@ -77,9 +84,8 @@ pub fn view(model: Model) -> element.Element(Message) {
     ]),
     html.input([
       attribute.id("weapon_speed_input"),
-      //   attribute.min("0"),
-      attribute.value(model.weapon_time_per_hit_input),
-      event.on_input(UserSetWeaponSpeed),
+      attribute.value(model.weapon.time_per_hit |> float.to_string()),
+      attribute.disabled(True),
     ]),
     html.br([]),
     html.br([]),
@@ -87,11 +93,37 @@ pub fn view(model: Model) -> element.Element(Message) {
   ])
 }
 
+fn weapon_dropdown(model: Model) -> element.Element(Message) {
+  let weapon_ids = ["none", "kings-klaws", "arborbiter"]
+
+  element.fragment([
+    html.label([attribute.for("weapon_input")], [
+      html.text("Weapon: "),
+    ]),
+    html.select(
+      [
+        attribute.id("weapon_input"),
+        event.on_input(UserSetWeapon),
+      ],
+      list.map(weapon_ids, fn(id) {
+        let w = weapon.by_id(id)
+        html.option(
+          [attribute.value(w.id), attribute.selected(id == model.weapon.id)],
+          w.name,
+        )
+      }),
+    ),
+  ])
+}
+
 fn damage_output_view(model: Model) -> element.Element(Message) {
+  let total_atk = model.player_atk + model.weapon.atk
+  let total_str = model.player_str + model.weapon.str
+
   let hits_per_kill =
-    damage_simulator.hits_per_kill(
-      player_atk: model.player_atk,
-      player_str: model.player_str,
+    dsim.hits_per_kill(
+      player_atk: total_atk,
+      player_str: total_str,
       mob_def: model.mob_def,
       mob_hp: model.mob_hp,
       player_crit_chance: model.player_crit_chance,
@@ -101,12 +133,12 @@ fn damage_output_view(model: Model) -> element.Element(Message) {
     html.text(
       "Damage range per hit: "
       <> "1 to "
-      <> { int.to_string(max_hit(model.player_str)) },
+      <> { int.to_string(dsim.max_hit(total_str)) },
     ),
     html.br([]),
     html.text(
       "Chance to hit: "
-      <> chance_to_hit(player_atk: model.player_atk, mob_def: model.mob_def)
+      <> dsim.chance_to_hit(player_atk: total_atk, mob_def: model.mob_def)
       |> float.multiply(100.0)
       |> float.to_string()
       <> "%",
@@ -124,7 +156,7 @@ fn damage_output_view(model: Model) -> element.Element(Message) {
       "Expected time per kill: "
       <> case hits_per_kill {
         Ok(hits_per_kill) ->
-          hits_per_kill *. model.weapon_time_per_hit |> float.to_string()
+          hits_per_kill *. model.weapon.time_per_hit |> float.to_string()
         Error(_) -> "Infinity"
       },
     ),

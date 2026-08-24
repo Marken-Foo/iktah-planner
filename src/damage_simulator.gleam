@@ -3,6 +3,7 @@ import gleam/int
 import gleam/result
 import lustre/effect
 
+import damage_simulator/weapon.{type Weapon}
 import probability as probs
 
 pub type Model {
@@ -12,8 +13,7 @@ pub type Model {
     player_crit_chance: Float,
     mob_def: Int,
     mob_hp: Int,
-    weapon_time_per_hit_input: String,
-    weapon_time_per_hit: Float,
+    weapon: Weapon,
   )
 }
 
@@ -23,7 +23,7 @@ pub type Message {
   UserSetPlayerCritChance(String)
   UserSetMobDef(String)
   UserSetMobHp(String)
-  UserSetWeaponSpeed(String)
+  UserSetWeapon(String)
 }
 
 pub fn init(_) -> #(Model, effect.Effect(Message)) {
@@ -33,8 +33,7 @@ pub fn init(_) -> #(Model, effect.Effect(Message)) {
     mob_def: 1,
     mob_hp: 120,
     player_crit_chance: 0.05,
-    weapon_time_per_hit_input: "2.0",
-    weapon_time_per_hit: 2.0,
+    weapon: weapon.by_id("kings-klaws"),
   )
   |> fn(m) { #(m, effect.none()) }
 }
@@ -78,17 +77,9 @@ pub fn update(
       |> fn(m) { Model(..m, mob_hp:) }
       |> fn(m) { #(m, effect.none()) }
     }
-    UserSetWeaponSpeed(str) -> {
-      let weapon_time_per_hit =
-        float.parse(str)
-        |> result.try_recover(fn(_) {
-          int.parse(str) |> result.map(int.to_float)
-        })
-        |> result.unwrap(model.weapon_time_per_hit)
+    UserSetWeapon(s) -> {
       model
-      |> fn(m) {
-        Model(..m, weapon_time_per_hit_input: str, weapon_time_per_hit:)
-      }
+      |> fn(m) { Model(..m, weapon: weapon.by_id(s)) }
       |> fn(m) { #(m, effect.none()) }
     }
   }
