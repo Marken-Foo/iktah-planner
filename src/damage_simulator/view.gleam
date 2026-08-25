@@ -98,7 +98,14 @@ pub fn view(model: Model) -> element.Element(Message) {
 }
 
 fn weapon_dropdown(model: Model) -> element.Element(Message) {
-  let weapon_ids = ["none", "kings-klaws", "arborbiter"]
+  let weapon_ids = [
+    "none",
+    "kings-klaws",
+    "arborbiter",
+    "klynite-dagger",
+    "alchemists-kris",
+    "shadow-dagger",
+  ]
 
   html.div([], [
     html.label([attribute.for("weapon_input")], [
