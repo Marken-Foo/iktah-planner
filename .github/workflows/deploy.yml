@@ -31,6 +31,7 @@ jobs:
         run: gleam run -m lustre/dev build --minify --outdir=dist
       - name: Update paths in index.html
         run: |
+          sed -i 's|/iktah_planner.css|/iktah-planner/iktah_planner.css|' dist/index.html
           sed -i 's|/iktah_planner.js|/iktah-planner/iktah_planner.js|' dist/index.html
       - name: Setup Pages
         uses: actions/configure-pages@v5
