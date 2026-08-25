@@ -1,5 +1,35 @@
+pub type ConsumedLog {
+  None
+  Hemlock
+  RedFir
+  Oak
+  Maple
+  Cedar
+  Elderwood
+}
+
+pub fn log_bonus(log: ConsumedLog) -> Float {
+  case log {
+    None -> 0.0
+    Hemlock -> 0.05
+    RedFir -> 0.1
+    Oak -> 0.2
+    Maple -> 0.3
+    Cedar -> 0.4
+    Elderwood -> 0.5
+  }
+}
+
 pub type Weapon {
   Weapon(id: String, name: String, atk: Int, str: Int, time_per_hit: Float)
+  Arborbiter(
+    id: String,
+    name: String,
+    atk: Int,
+    str: Int,
+    time_per_hit: Float,
+    consumed_log: ConsumedLog,
+  )
 }
 
 pub fn by_id(name: String) -> Weapon {
@@ -13,12 +43,13 @@ pub fn by_id(name: String) -> Weapon {
         time_per_hit: 2.0,
       )
     "arborbiter" ->
-      Weapon(
+      Arborbiter(
         id: "arborbiter",
         name: "Arborbiter",
         atk: 35,
         str: 20,
         time_per_hit: 2.8,
+        consumed_log: Elderwood,
       )
     "klynite-dagger" ->
       Weapon(

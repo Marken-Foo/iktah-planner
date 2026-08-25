@@ -1,6 +1,6 @@
 import damage_simulator.{
-  type Message, type Model, UserSetMobDef, UserSetMobHp, UserSetPlayerAtk,
-  UserSetPlayerCritChance, UserSetPlayerStr, UserSetWeapon,
+  type Message, type Model, UserSetLog, UserSetMobDef, UserSetMobHp,
+  UserSetPlayerAtk, UserSetPlayerCritChance, UserSetPlayerStr, UserSetWeapon,
 } as dsim
 import damage_simulator/weapon
 import gleam/float
@@ -121,6 +121,74 @@ fn weapon_dropdown(model: Model) -> element.Element(Message) {
         html.option(
           [attribute.value(w.id), attribute.selected(id == model.weapon.id)],
           w.name,
+        )
+      }),
+    ),
+    {
+      case model.weapon {
+        weapon.Weapon(_, _, _, _, _) -> element.none()
+        weapon.Arborbiter(_, _, _, _, _, consumed_log:) ->
+          arborbiter_log_dropdown(consumed_log)
+      }
+    },
+  ])
+}
+
+fn log_to_display_string(log: weapon.ConsumedLog) -> String {
+  case log {
+    weapon.None -> "None"
+    weapon.Hemlock -> "Hemlock"
+    weapon.RedFir -> "Red Fir"
+    weapon.Oak -> "Oak"
+    weapon.Maple -> "Maple"
+    weapon.Cedar -> "Cedar"
+    weapon.Elderwood -> "Elderwood"
+  }
+}
+
+fn log_to_key(log: weapon.ConsumedLog) -> String {
+  case log {
+    weapon.None -> "none"
+    weapon.Hemlock -> "hemlock"
+    weapon.RedFir -> "red_fir"
+    weapon.Oak -> "oak"
+    weapon.Maple -> "maple"
+    weapon.Cedar -> "cedar"
+    weapon.Elderwood -> "elderwood"
+  }
+}
+
+fn arborbiter_log_dropdown(
+  consumed_log: weapon.ConsumedLog,
+) -> element.Element(Message) {
+  let all_log_options = [
+    weapon.None,
+    weapon.Hemlock,
+    weapon.RedFir,
+    weapon.Oak,
+    weapon.Maple,
+    weapon.Cedar,
+    weapon.Elderwood,
+  ]
+  element.fragment([
+    html.label([attribute.for("arborbiter_log_input")], [html.text("Log: ")]),
+    html.select(
+      [
+        attribute.id("arborbiter_log_input"),
+        event.on_input(UserSetLog),
+      ],
+      list.map(all_log_options, fn(log) {
+        html.option(
+          [
+            attribute.value(log_to_key(log)),
+            attribute.selected(log == consumed_log),
+          ],
+          log_to_display_string(log)
+            <> " ("
+            <> weapon.log_bonus(log)
+          |> float.multiply(100.0)
+          |> float.to_string()
+            <> "%)",
         )
       }),
     ),

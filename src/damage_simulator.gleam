@@ -24,6 +24,7 @@ pub type Message {
   UserSetMobDef(String)
   UserSetMobHp(String)
   UserSetWeapon(String)
+  UserSetLog(String)
 }
 
 pub fn init(_) -> #(Model, effect.Effect(Message)) {
@@ -80,6 +81,40 @@ pub fn update(
     UserSetWeapon(s) -> {
       model
       |> fn(m) { Model(..m, weapon: weapon.by_id(s)) }
+      |> fn(m) { #(m, effect.none()) }
+    }
+    UserSetLog(s) -> {
+      let chosen_log = case s {
+        "none" -> weapon.None
+        "hemlock" -> weapon.Hemlock
+        "red_fir" -> weapon.RedFir
+        "oak" -> weapon.Oak
+        "maple" -> weapon.Maple
+        "cedar" -> weapon.Cedar
+        "elderwood" -> weapon.Elderwood
+        _ -> weapon.None
+      }
+      let new_weapon = case model.weapon {
+        weapon.Weapon(_, _, _, _, _) -> model.weapon
+        weapon.Arborbiter(
+          id:,
+          name:,
+          atk:,
+          str:,
+          time_per_hit:,
+          consumed_log: _,
+        ) ->
+          weapon.Arborbiter(
+            id:,
+            name:,
+            atk:,
+            str:,
+            time_per_hit:,
+            consumed_log: chosen_log,
+          )
+      }
+      model
+      |> fn(m) { Model(..m, weapon: new_weapon) }
       |> fn(m) { #(m, effect.none()) }
     }
   }
