@@ -16,3 +16,9 @@ input,
 select {
 	font: inherit;
 }
+
+.stat-inputs {
+	align-items: flex-start;
+	display: flex;
+	flex-direction: column;
+}
