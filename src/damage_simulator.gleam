@@ -160,16 +160,13 @@ fn apply_miss_chance(
   base_pmf |> probs.scale_and_reassign_probability(chance_to_hit, 0)
 }
 
-pub fn hits_per_kill(
+pub fn damage_distribution(
   player_atk player_atk: Int,
   player_str player_str: Int,
   mob_def mob_def: Int,
-  mob_hp mob_hp: Int,
   player_crit_chance player_crit_chance: Float,
-) -> Result(Float, Nil) {
-  let pmf_of_one_attack =
-    probs.uniform_pmf(1, max_hit(player_str))
-    |> apply_miss_chance(chance_to_hit(player_atk, mob_def))
-    |> apply_crit_rolls(player_crit_chance)
-  probs.expected_rolls_to_exceed_total_k(mob_hp, pmf_of_one_attack)
+) -> probs.Pmf {
+  probs.uniform_pmf(1, max_hit(player_str))
+  |> apply_miss_chance(chance_to_hit(player_atk:, mob_def:))
+  |> apply_crit_rolls(player_crit_chance)
 }

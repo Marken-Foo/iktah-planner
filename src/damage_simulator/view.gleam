@@ -10,6 +10,7 @@ import lustre/attribute
 import lustre/element
 import lustre/element/html
 import lustre/event
+import probability
 
 pub fn view(model: Model) -> element.Element(Message) {
   html.form([attribute.class("stat-inputs")], [
@@ -199,20 +200,29 @@ fn damage_output_view(model: Model) -> element.Element(Message) {
   let total_atk = model.player_atk + model.weapon.atk
   let total_str = model.player_str + model.weapon.str
 
-  let hits_per_kill =
-    dsim.hits_per_kill(
+  let swing =
+    dsim.damage_distribution(
       player_atk: total_atk,
       player_str: total_str,
       mob_def: model.mob_def,
-      mob_hp: model.mob_hp,
       player_crit_chance: model.player_crit_chance,
     )
+
+  let swing = case model.weapon {
+    weapon.Weapon(_, _, _, _, _) -> swing
+    weapon.Arborbiter(_, _, _, _, _, consumed_log:) ->
+      probability.scale_pmf_values(swing, 1.0 +. weapon.log_bonus(consumed_log))
+  }
+
+  let hits_per_kill =
+    probability.expected_rolls_to_exceed_total_k(model.mob_hp, swing)
 
   element.fragment([
     html.text(
       "Damage range per hit: "
-      <> "1 to "
-      <> { int.to_string(dsim.max_hit(total_str)) },
+      <> { probability.get_nonzero_min_value(swing) |> int.to_string() }
+      <> " to "
+      <> { probability.get_max_value(swing) |> int.to_string() },
     ),
     html.br([]),
     html.text(

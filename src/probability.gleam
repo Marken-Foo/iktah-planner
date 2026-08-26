@@ -4,6 +4,7 @@ import gleam/float
 import gleam/int
 import gleam/list
 import gleam/option
+import gleam/order
 import gleam/pair
 import gleam/result
 
@@ -58,16 +59,36 @@ pub fn get_probability(pmf: Pmf, value: Value) -> Probability {
   raw(pmf) |> dict.get(value) |> result.unwrap(0.0)
 }
 
-fn get_max_value(pmf: Pmf) -> Value {
+pub fn get_max_value(pmf: Pmf) -> Value {
   // Unwrap should never trigger on well-formed pmf,
   // so set an "obviously wrong" result inside it as a smoke alarm
   raw(pmf) |> dict.keys() |> list.max(int.compare) |> result.unwrap(-999)
+}
+
+pub fn get_nonzero_min_value(pmf: Pmf) -> Value {
+  raw(pmf)
+  |> dict.keys()
+  |> list.filter(fn(k) { k != 0 })
+  |> list.max(order.reverse(int.compare))
+  |> result.unwrap(999)
 }
 
 fn raw(pmf: Pmf) -> dict.Dict(Value, Probability) {
   case pmf {
     Pmf(pmf) -> pmf
   }
+}
+
+pub fn scale_pmf_values(pmf: Pmf, by factor: Float) -> Pmf {
+  raw(pmf)
+  |> dict.to_list()
+  |> list.map(fn(x) {
+    let #(v, p) = x
+    let new_v = int.to_float(v) *. factor |> float.round()
+    #(new_v, p)
+  })
+  |> dict.from_list()
+  |> Pmf()
 }
 
 fn scale_pmf(pmf: Pmf, by factor: Float) -> Pmf {
