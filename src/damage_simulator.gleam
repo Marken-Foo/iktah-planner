@@ -1,5 +1,6 @@
 import gleam/float
 import gleam/int
+import gleam/list
 import gleam/result
 import lustre/effect
 
@@ -165,8 +166,11 @@ pub fn damage_distribution(
   player_str player_str: Int,
   mob_def mob_def: Int,
   player_crit_chance player_crit_chance: Float,
+  scaling scaling: List(Float),
 ) -> probs.Pmf {
-  probs.uniform_pmf(1, max_hit(player_str))
+  probs.UniformDamageRange(1.0, max_hit(player_str) |> int.to_float())
+  |> probs.scale_range(by: 1.0 +. list.fold(scaling, 1.0, float.multiply))
+  |> probs.range_to_pmf()
   |> apply_miss_chance(chance_to_hit(player_atk:, mob_def:))
   |> apply_crit_rolls(player_crit_chance)
 }

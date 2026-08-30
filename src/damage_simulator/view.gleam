@@ -200,19 +200,21 @@ fn damage_output_view(model: Model) -> element.Element(Message) {
   let total_atk = model.player_atk + model.weapon.atk
   let total_str = model.player_str + model.weapon.str
 
+  let scaling = case model.weapon {
+    weapon.Weapon(_, _, _, _, _) -> []
+    weapon.Arborbiter(_, _, _, _, _, consumed_log:) -> [
+      weapon.log_bonus(consumed_log),
+    ]
+  }
+
   let swing =
     dsim.damage_distribution(
       player_atk: total_atk,
       player_str: total_str,
       mob_def: model.mob_def,
       player_crit_chance: model.player_crit_chance,
+      scaling: scaling,
     )
-
-  let swing = case model.weapon {
-    weapon.Weapon(_, _, _, _, _) -> swing
-    weapon.Arborbiter(_, _, _, _, _, consumed_log:) ->
-      probability.scale_pmf_values(swing, 1.0 +. weapon.log_bonus(consumed_log))
-  }
 
   let hits_per_kill =
     probability.expected_rolls_to_exceed_total_k(model.mob_hp, swing)

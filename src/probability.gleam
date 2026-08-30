@@ -14,6 +14,42 @@ type Value =
 type Probability =
   Float
 
+pub type UniformDamageRange {
+  UniformDamageRange(min: Float, max: Float)
+}
+
+pub fn scale_range(
+  range: UniformDamageRange,
+  by factor: Float,
+) -> UniformDamageRange {
+  UniformDamageRange(min: range.min *. factor, max: range.max *. factor)
+}
+
+pub fn range_to_pmf(range: UniformDamageRange) -> Pmf {
+  let total_mass = range.max -. range.min
+  mass_points_([], float.truncate(range.min), range.min, range.max)
+  |> list.map(pair.map_second(_, fn(mass) { mass /. total_mass }))
+  |> dict.from_list()
+  |> Pmf()
+}
+
+fn mass_points_(
+  acc: List(MassPoint),
+  bin_label: Int,
+  min: Float,
+  max: Float,
+) -> List(MassPoint) {
+  assert min <. max
+  case int.to_float(bin_label) {
+    x if x >=. max -> acc
+    x if min -. x >. 1.0 -> mass_points_(acc, float.truncate(min), min, max)
+    x -> {
+      let bin_mass = float.min(x +. 1.0, max) -. float.max(x, min -. x)
+      mass_points_([#(bin_label, bin_mass), ..acc], bin_label + 1, min, max)
+    }
+  }
+}
+
 // Value simulation
 pub type Pmf {
   Pmf(dict.Dict(Value, Probability))
