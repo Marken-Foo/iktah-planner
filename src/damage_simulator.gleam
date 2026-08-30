@@ -169,7 +169,11 @@ pub fn damage_distribution(
   scaling scaling: List(Float),
 ) -> probs.Pmf {
   probs.UniformDamageRange(1.0, max_hit(player_str) |> int.to_float())
-  |> probs.scale_range(by: 1.0 +. list.fold(scaling, 1.0, float.multiply))
+  |> probs.scale_range(
+    by: scaling
+    |> list.map(float.add(_, 1.0))
+    |> list.fold(1.0, float.multiply),
+  )
   |> probs.range_to_pmf()
   |> apply_miss_chance(chance_to_hit(player_atk:, mob_def:))
   |> apply_crit_rolls(player_crit_chance)
